@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Python (if using any backend scripts)
+__pycache__/
+venv/
+env/
+
+# Environment variables (Crucial for security)
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+.next/
