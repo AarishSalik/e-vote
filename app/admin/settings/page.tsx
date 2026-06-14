@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, PlusCircle, Trash, RefreshCw, KeyRound, Save, UserPlus, Clipboard, ClipboardCheck, Users, Vote } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, RefreshCw, KeyRound, Save, Clipboard, ClipboardCheck, Users, Vote } from 'lucide-react';
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,21 +20,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { houses, schoolClasses as defaultClasses } from '@/lib/data';
 import { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Candidate, SchoolClass, Student } from '@/lib/types';
+import type { Candidate, SchoolClass } from '@/lib/types';
 import { BackButton } from '@/components/back-button';
 import Image from 'next/image';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { getDb } from '@/lib/firebase';
-import { collection, getDocs, writeBatch, doc, setDoc, addDoc, getDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, writeBatch, doc, setDoc, addDoc, getDoc } from "firebase/firestore";
 
 
 const candidateSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters." }),
-  position: z.enum(['HR', 'CR'] as const, {
-    errorMap: () => ({ message: "Position is required." }),
+  position: z.enum(["HR", "CR"], {
+    error: (issue) =>
+      issue.input === undefined
+        ? "Position is required."
+        : "Position must be either HR or CR.",
   }),
-  houseId: z.string({ required_error: "House is required." }),
+  houseId: z.string({
+    error: (issue) =>
+      issue.input === undefined
+        ? "House is required."
+        : "House must be a string.",
+  }),
   classId: z.string().optional(),
   photoUrl: z.string().optional(),
   symbolUrl: z.string().optional(),
@@ -49,8 +57,13 @@ const candidateSchema = z.object({
 });
 
 const studentSchema = z.object({
-    classId: z.string({ required_error: "Class is required." }),
-    quantity: z.coerce.number().min(1, "Quantity must be at least 1.").max(100, "Cannot generate more than 100 IDs at once."),
+    classId: z.string({
+        error: (issue) =>
+            issue.input === undefined
+                ? "Class is required."
+                : "Class must be a string.",
+    }),
+    quantity: z.number().min(1, "Quantity must be at least 1.").max(100, "Cannot generate more than 100 IDs at once."),
 });
 
 const classManagementSchema = z.object({
@@ -88,9 +101,9 @@ export default function AdminSettingsPage() {
     resolver: zodResolver(candidateSchema),
     defaultValues: {
       name: "",
-      position: undefined,
-      houseId: undefined,
-      classId: undefined,
+      position: "HR",
+      houseId: "",
+      classId: "",
       photoUrl: "",
       symbolUrl: "",
     },
@@ -99,6 +112,7 @@ export default function AdminSettingsPage() {
   const studentForm = useForm<z.infer<typeof studentSchema>>({
     resolver: zodResolver(studentSchema),
     defaultValues: {
+        classId: "",
         quantity: 1,
     },
   });
@@ -553,7 +567,7 @@ export default function AdminSettingsPage() {
                                     render={({ field }) => (
                                         <FormItem className='sm:col-span-2'>
                                         <FormLabel>Class</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                        <Select onValueChange={field.onChange} value={field.value || ""}>
                                                 <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select a class" />
@@ -576,7 +590,18 @@ export default function AdminSettingsPage() {
                                         <FormItem>
                                             <FormLabel>Quantity</FormLabel>
                                             <FormControl>
-                                                <Input type="number" min="1" max="100" {...field} />
+                                                <Input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    value={field.value}
+                                                    onChange={(e) =>
+                                                        field.onChange(e.target.value === "" ? 0 : Number(e.target.value))
+                                                    }
+                                                    onBlur={field.onBlur}
+                                                    name={field.name}
+                                                    ref={field.ref}
+                                                />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -645,7 +670,7 @@ export default function AdminSettingsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Position</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                         <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a position" />
@@ -667,7 +692,7 @@ export default function AdminSettingsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>House</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                         <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a house" />
@@ -692,7 +717,7 @@ export default function AdminSettingsPage() {
                             render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Class</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} defaultValue="">
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
                                         <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a class" />
