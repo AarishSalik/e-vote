@@ -56,25 +56,26 @@ import * as z from "zod";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
 
-const editCandidateSchema = z.object({
-  name: z.string().min(3, { message: "Name must be at least 3 characters." }),
-  position: z.enum(['HR', 'CR'], {
-    message: "Position is required.",
+const candidateSchema = z.object({
+  name: z.string().min(3, { error: "Name must be at least 3 characters." }),
+
+  position: z.enum(["HR", "CR"], {
+    error: (issue) =>
+      issue.input === undefined
+        ? "Position is required."
+        : "Position must be either HR or CR.",
   }),
+
   houseId: z.string({
-    message: "House is required.",
+    error: (issue) =>
+      issue.input === undefined
+        ? "House is required."
+        : "House must be a string.",
   }),
+
   classId: z.string().optional(),
   photoUrl: z.string().optional(),
   symbolUrl: z.string().optional(),
-}).refine(data => {
-    if (data.position === 'CR') {
-        return !!data.classId;
-    }
-    return true;
-}, {
-    message: "Class is required for CR candidates.",
-    path: ["classId"],
 });
 
 export default function AdminDashboardPage() {
@@ -91,8 +92,8 @@ export default function AdminDashboardPage() {
   const [isEditLoading, setIsEditLoading] = useState(false);
   const [activeAccordions, setActiveAccordions] = useState<string[]>(["results"]);
   
-  const editForm = useForm<z.infer<typeof editCandidateSchema>>({
-    resolver: zodResolver(editCandidateSchema),
+  const editForm = useForm<z.infer<typeof candidateSchema>>({
+    resolver: zodResolver(candidateSchema),
   });
 
   const stableHashCode = (str: string) => {
@@ -317,7 +318,7 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const onEditSubmit = async (values: z.infer<typeof editCandidateSchema>) => {
+  const onEditSubmit = async (values: z.infer<typeof candidateSchema>) => {
     if (!editingCandidate) return;
     setIsEditLoading(true);
     try {
