@@ -1,4 +1,5 @@
 'use client';
+
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
 import { UserNav } from '@/components/user-nav';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BarChart, Users, Settings, Search, Vote, Download, RefreshCw, Loader2, Trash2, Pencil, Save, Trophy, Medal, ChevronRight, Home } from 'lucide-react';
+import { ArrowRight, BarChart, Users, Settings, Search, Vote, Download, RefreshCw, Loader2, Trash2, Pencil, Save, Trophy, Medal, Home } from 'lucide-react';
 import { BackButton } from '@/components/back-button';
 import { LiveResultsChart } from '@/components/live-results-chart';
 import { TurnoutByHouseChart } from '@/components/turnout-by-house-chart';
@@ -29,7 +30,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import Image from 'next/image';
-import { HrResultsByClassChart } from '@/components/hr-results-by-class-chart';
 import { getDb } from '@/lib/firebase';
 import { collection, getDocs, query, where, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -55,14 +55,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 const editCandidateSchema = z.object({
   name: z.string().min(3, { message: "Name must be at least 3 characters." }),
-  position: z.enum(['HR', 'CR'] as const, {
-    errorMap: () => ({ message: "Position is required." }),
+  position: z.enum(['HR', 'CR'], {
+    message: "Position is required.",
   }),
-  houseId: z.string({ required_error: "House is required." }),
+  houseId: z.string({
+    message: "House is required.",
+  }),
   classId: z.string().optional(),
   photoUrl: z.string().optional(),
   symbolUrl: z.string().optional(),
@@ -274,7 +275,6 @@ export default function AdminDashboardPage() {
       houses.forEach(house => {
           const houseCandidates = filteredCandidates.filter(c => c.houseId === house.id);
           if (houseCandidates.length > 0) {
-              // Sort candidates: HR first, then CRs by class name
               const sorted = [...houseCandidates].sort((a, b) => {
                 if (a.position === 'HR' && b.position === 'CR') return -1;
                 if (a.position === 'CR' && b.position === 'HR') return 1;
@@ -309,7 +309,7 @@ export default function AdminDashboardPage() {
     setEditingCandidate(candidate);
     editForm.reset({
         name: candidate.name,
-        position: candidate.position,
+        position: candidate.position as "HR" | "CR",
         houseId: candidate.houseId,
         classId: candidate.classId,
         photoUrl: candidate.photoUrl,
@@ -408,7 +408,7 @@ export default function AdminDashboardPage() {
     doc.text("3. Class Representative (CR) - Results by Class", 14, yPos);
     yPos += 10;
 
-    winnersData.crWinners.forEach((classResult, index) => {
+    winnersData.crWinners.forEach((classResult) => {
         if (yPos > 240) {
             doc.addPage();
             yPos = 20;
